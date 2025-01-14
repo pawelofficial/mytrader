@@ -97,6 +97,7 @@ class Data:
         for col in self.df.columns:
             setattr(self, col, self.df[col])
     
+    #---------------------------------------------------------------------------
     @update_columns_after
     def calculate_emas(self,emas=[5,10,20,50,100]):
         for ema in emas:

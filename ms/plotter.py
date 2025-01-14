@@ -16,12 +16,20 @@ class Plotter:
     def simplest_scatter_plot(self,data : Data
                               ,xcol='datetime'
                               ,ycol='close'
+                              ,ema_cols=None
                               ,show=True
                               ,save=True
                               ,fname='simplest_scatter_plot.png'): 
         plt.scatter(data.df[xcol],data.df[ycol]) 
         plt.xlabel(xcol)
         plt.ylabel(ycol)
+        
+        # if ema cols are not none plot them as lines 
+        if ema_cols:
+            for col in ema_cols:
+                plt.plot(data.df[xcol],data.df[col],label=col)
+            plt.legend()
+        
         if show:
             plt.show()
         if save:

@@ -16,4 +16,4 @@ d.normalize()
 #d.download_historical_data()
 
 p=ms.plotter.Plotter()
-p.simplest_scatter_plot(d,show=False)
+p.simplest_scatter_plot(d,show=False,ema_cols=['ema_5','ema_10','ema_20','ema_50','ema_100'])
