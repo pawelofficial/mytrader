@@ -23,7 +23,10 @@ class Data:
         """ reads data from data folder """
         self.logger.info(f'reading data from {fname}')
         self.df=pd.read_csv( os.path.join(self.data_path, fname))
-        
+   
+    def calculate_emas(self,emas=[5,10,20,50,100]):
+        for ema in emas:
+            self.df[f'ema_{ema}'] = self.df['close'].ewm(span=ema, adjust=False).mean()
 
     def download_historical_data(self
                                  ,ticker='SPX'
@@ -70,12 +73,27 @@ class Data:
         self.logger.info('changing structure ok ')
         if save:
             self.logger.info('saving data')
+            data.index.name='index'
             data.to_csv(os.path.join(self.data_path,f'{ticker}.csv'))
         else:
             self.logger.info('not saving data')
 
         return data 
     
+
+    @property
+    def columns(self):
+        """Returns the columns of the underlying DataFrame."""
+        if self.df is not None:
+            self._set_columns_as_attributes()
+            return self.df.columns
+        else:
+            raise ValueError("No DataFrame loaded to check columns.")
+    
+    def _set_columns_as_attributes(self):
+        """Set DataFrame columns as attributes."""
+        for col in self.df.columns:
+            setattr(self, col, self.df[col])
     
     
 if __name__ == '__main__':
