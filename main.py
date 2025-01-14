@@ -8,10 +8,12 @@ import ms.data
 #d.download_historical_data()
 
 d=ms.data.Data()
-#d.download_historical_data()
+#d._download_historical_data()
 print(d.columns)
-d.calculate_emas()
-print(d.columns)
+d.recalculate_all()
+d.normalize()
+
 #d.download_historical_data()
 
 p=ms.plotter.Plotter()
+p.simplest_scatter_plot(d,show=False)

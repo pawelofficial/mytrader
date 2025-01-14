@@ -7,7 +7,13 @@ import yfinance as yf
 from ms.utils import setup_logger
 
 
-    
+def update_columns_after(func):
+    """Decorator to update columns as attributes after the function executes."""
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)  # Execute the original function
+        self._set_columns_as_attributes()    # Update columns as attributes
+        return result
+    return wrapper
 
 
 
@@ -16,19 +22,16 @@ class Data:
         self.this_path = os.path.dirname(os.path.abspath(__file__)) 
         self.data_path = os.path.join(self.this_path, 'data')
         self.logger=setup_logger('data')
-        self.read_data()
+        self.__read_data()
+        self.base_columns=['open','close','low','high']
         self.tickers_map={'SPX':'^GSPC'}    
     
-    def read_data(self,fname='SPX.csv'):
+    def __read_data(self,fname='SPX.csv'):
         """ reads data from data folder """
         self.logger.info(f'reading data from {fname}')
         self.df=pd.read_csv( os.path.join(self.data_path, fname))
-   
-    def calculate_emas(self,emas=[5,10,20,50,100]):
-        for ema in emas:
-            self.df[f'ema_{ema}'] = self.df['close'].ewm(span=ema, adjust=False).mean()
 
-    def download_historical_data(self
+    def _download_historical_data(self
                                  ,ticker='SPX'
                                  ,start_ts = '1990-01-01' # yyyy-mm-dd 
                                  ,end_ts   = 'today' 
@@ -80,7 +83,6 @@ class Data:
 
         return data 
     
-
     @property
     def columns(self):
         """Returns the columns of the underlying DataFrame."""
@@ -95,6 +97,26 @@ class Data:
         for col in self.df.columns:
             setattr(self, col, self.df[col])
     
+    @update_columns_after
+    def calculate_emas(self,emas=[5,10,20,50,100]):
+        for ema in emas:
+            self.df[f'ema_{ema}'] = self.df['close'].ewm(span=ema, adjust=False).mean()
+
+    @update_columns_after
+    def calculate_smas(self,smas=[5,10,20,50,100]):
+        for sma in smas:
+            self.df[f'sma_{sma}'] = self.df['close'].rolling(window=sma).mean()
+
+    def recalculate_all(self):
+        self.calculate_emas()
+        self.calculate_smas()
+
+
+    def normalize(self,norm_column='sma_50'):
+        for col in self.base_columns:
+            self.df[f'{col}']=self.df[col]-self.df[norm_column]
+        self.recalculate_all()
+        
     
 if __name__ == '__main__':
     pass
