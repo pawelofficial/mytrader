@@ -1,25 +1,30 @@
-import logging
-import re 
 import os 
 import pandas as pd 
 from  pytickersymbols import PyTickerSymbols
 import yfinance as yf
-if __name__=='__main__':
-    from utils import setup_logger
-else:
-    from .utils import setup_logger
 
 
-class Downloader:
+from ms.utils import setup_logger
+
+
+    
+
+
+
+class Data:
     def __init__(self):
-        self.this_path=os.path.dirname(os.path.abspath(__file__))
-        self.data_path=os.path.join(self.this_path,'data')
-        self.logger=setup_logger('downloader')
-        self.logger.info('Data object created')
+        self.this_path = os.path.dirname(os.path.abspath(__file__)) 
+        self.data_path = os.path.join(self.this_path, 'data')
+        self.logger=setup_logger('data')
+        self.read_data()
         self.tickers_map={'SPX':'^GSPC'}    
     
-    
-    # downloads historical data 
+    def read_data(self,fname='SPX.csv'):
+        """ reads data from data folder """
+        self.logger.info(f'reading data from {fname}')
+        self.df=pd.read_csv( os.path.join(self.data_path, fname))
+        
+
     def download_historical_data(self
                                  ,ticker='SPX'
                                  ,start_ts = '1990-01-01' # yyyy-mm-dd 
@@ -70,9 +75,8 @@ class Downloader:
             self.logger.info('not saving data')
 
         return data 
-
-        
+    
+    
+    
 if __name__ == '__main__':
-    d=Downloader()
-    stocks=d.get_nasdaq_symbols()
-    d.download_historical_data()
+    pass
