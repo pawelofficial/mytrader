@@ -108,9 +108,27 @@ class Data:
         for sma in smas:
             self.df[f'sma_{sma}'] = self.df['close'].rolling(window=sma).mean()
 
+    @update_columns_after
+    def calculate_rsi(self,rsi_period=14):
+        delta = self.df['close'].diff()
+        gain = (delta.where(delta > 0, 0)).ewm(span=rsi_period).mean()
+        loss = (-delta.where(delta < 0, 0)).ewm(span=rsi_period).mean()
+        rs = gain / loss
+        self.df['rsi'] = 100 - (100 / (1 + rs))
+
+    @update_columns_after
+    def calculate_macd(self,short=12,long=26,signal=9):
+        self.df['short_ema'] = self.df['close'].ewm(span=short, adjust=False).mean()
+        self.df['long_ema'] = self.df['close'].ewm(span=long, adjust=False).mean()
+        self.df['macd'] = self.df['short_ema'] - self.df['long_ema']
+        self.df['signal'] = self.df['macd'].ewm(span=signal, adjust=False).mean()
+        self.df['histogram'] = self.df['macd'] - self.df['signal']
+
     def recalculate_all(self):
         self.calculate_emas()
         self.calculate_smas()
+        self.calculate_rsi()
+        self.calculate_macd()
 
 
     def normalize(self,norm_column='sma_50'):
