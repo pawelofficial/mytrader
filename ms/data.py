@@ -131,13 +131,15 @@ class Data:
         self.calculate_macd()
 
 
-    
+
 
     def normalize(self,norm_column='sma_50'):
         for col in self.base_columns:
-            self.df[f'{col}']=self.df[col]-self.df[norm_column]
-            # set nans to zero 
-            self.df[f'{col}'].fillna(0,inplace=True)
+            self.df[col] -= self.df[norm_column]
+        min_val = self.df[self.base_columns].min().min()
+        if min_val < 0:
+            for col in self.base_columns:
+                self.df[col] += abs(min_val)+1
         self.recalculate_all()
         
     
