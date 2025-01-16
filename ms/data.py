@@ -131,9 +131,13 @@ class Data:
         self.calculate_macd()
 
 
+    
+
     def normalize(self,norm_column='sma_50'):
         for col in self.base_columns:
             self.df[f'{col}']=self.df[col]-self.df[norm_column]
+            # set nans to zero 
+            self.df[f'{col}'].fillna(0,inplace=True)
         self.recalculate_all()
         
     
