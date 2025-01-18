@@ -30,6 +30,8 @@ class Data:
         """ reads data from data folder """
         self.logger.info(f'reading data from {fname}')
         self.df=pd.read_csv( os.path.join(self.data_path, fname))
+        # assert no nans 
+        assert self.df.isnull().values.any()==False
 
     def _download_historical_data(self
                                  ,ticker='SPX'
@@ -96,17 +98,64 @@ class Data:
         """Set DataFrame columns as attributes."""
         for col in self.df.columns:
             setattr(self, col, self.df[col])
+
+    def _pop_attributes(self,cols=[]):
+        """Remove DataFrame columns as attributes."""
+        for col in cols:
+            delattr(self, col)
+    def _set_attributes(self,cols=[]):
+        """Set DataFrame columns as attributes."""
+        for col in cols:
+            setattr(self, col, self.df[col])
     
     #---------------------------------------------------------------------------
     @update_columns_after
     def calculate_emas(self,emas=[5,10,20,50,100]):
         for ema in emas:
-            self.df[f'ema_{ema}'] = self.df['close'].ewm(span=ema, adjust=False).mean()
+            #self.df[f'ema_{ema}'] = self.df['close'].ewm(span=ema, adjust=False).mean()
+            self.df[f'ema_{ema}'] = (
+                self.df['close']
+                .ewm(span=ema, adjust=False)
+                .mean()
+                .fillna(method='bfill')
+            )
+            # fill nans with close value 
+            #self.df[f'ema_{ema}'].fillna(self.df['close'], inplace=True)
+            # asser no Nans
+            assert self.df[f'ema_{ema}'].isnull().values.any()==False
 
     @update_columns_after
     def calculate_smas(self,smas=[5,10,20,50,100]):
         for sma in smas:
-            self.df[f'sma_{sma}'] = self.df['close'].rolling(window=sma).mean()
+            #self.df[f'sma_{sma}'] = self.df['close'].rolling(window=sma).mean()
+            self.df[f'sma_{sma}'] = (
+                self.df['close']
+                .rolling(window=sma)
+                .mean()
+                .fillna(method='bfill')  # or method='ffill', or both in sequence
+            )
+            # fill nans with first value
+            #self.df[f'sma_{sma}'].fillna(self.df[f'close'], inplace=True)
+            # asser no Nans
+            assert self.df[f'sma_{sma}'].isnull().values.any()==False
+
+    @update_columns_after
+    def calculate_ema_derivatives(self,emas=[5,10,20,50,100],smooth=5 ):
+        for ema in emas:
+            #self.df[f'ema_{ema}_der'] = self.df[f'ema_{ema}'].diff()
+            self.df[f'ema_{ema}_der'] = (
+                    self.df[f'ema_{ema}']
+                    .diff()
+                    .rolling(window=smooth, center=True, min_periods=1)
+                    .mean()
+                    .fillna(method='bfill')
+                    .fillna(method='ffill')
+                )
+            # fill nans with first non null value
+            #val=self.df[f'ema_{ema}_der'].first_valid_index()
+            #self.df[f'ema_{ema}_der'].fillna(val, inplace=True)
+            # assert no nans 
+            assert self.df[f'ema_{ema}_der'].isnull().values.any()==False
 
     @update_columns_after
     def calculate_rsi(self,rsi_period=14):
@@ -116,30 +165,41 @@ class Data:
         rs = gain / loss
         self.df['rsi'] = 100 - (100 / (1 + rs))
 
-    @update_columns_after
+    
     def calculate_macd(self,short=12,long=26,signal=9):
         self.df['short_ema'] = self.df['close'].ewm(span=short, adjust=False).mean()
         self.df['long_ema'] = self.df['close'].ewm(span=long, adjust=False).mean()
         self.df['macd'] = self.df['short_ema'] - self.df['long_ema']
-        self.df['signal'] = self.df['macd'].ewm(span=signal, adjust=False).mean()
-        self.df['histogram'] = self.df['macd'] - self.df['signal']
+        self.df['macd_signal'] = self.df['macd'].ewm(span=signal, adjust=False).mean()
+        self.df['macd_histogram'] = self.df['macd'] - self.df['macd_signal']
+        self._set_attributes(['macd','macd_signal'])
 
     def recalculate_all(self):
         self.calculate_emas()
         self.calculate_smas()
-        self.calculate_rsi()
-        self.calculate_macd()
+        #self.calculate_rsi()
+        #self.calculate_macd()
+        self.calculate_ema_derivatives()
 
 
 
 
     def normalize(self,norm_column='sma_50'):
+        
         for col in self.base_columns:
             self.df[col] -= self.df[norm_column]
         min_val = self.df[self.base_columns].min().min()
         if min_val < 0:
             for col in self.base_columns:
                 self.df[col] += abs(min_val)+1
+        # asser no Nans 
+        bl= self.df[self.base_columns].isnull().values.any()==False
+        if bl: # print nans 
+            pass
+        else:
+            msk=self.df[self.base_columns].isnull().values
+            print(self.df[msk])
+            raise ValueError('nans in base columns')
         self.recalculate_all()
         
     
