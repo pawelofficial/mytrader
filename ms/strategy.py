@@ -11,12 +11,12 @@ class Strategy:
         
 
 
-    def optimize(self, method='nelder-mead', dim=1, options=None, stop_ratio=0.01, N=10, search_span=5):
+    def optimize(self, method='nelder-mead', dim=1, options=None, stop_ratio=0.01, N=10, search_span=20):
         if options is None:
             options = {'maxiter': 1000, 'maxfev': 2000}
 
         def f(params):
-            return -self.calculate_profit(self.strategy(params=params))
+            return -self.calculate_profit_scalp(self.strategy(params=params))
 
         
         best_best_result=None
@@ -32,8 +32,8 @@ class Strategy:
                 print("params:", res.x)
                 print("profit:", -res.fun)
             
-            print(" best params:", best_res.x)
-            print(" best profit:", -best_res.fun)
+            print("    best params:", best_res.x)
+            print("    best profit:", -best_res.fun)
             
             if best_best_result is None: # is the best result is None set current best result as the best result 
                 best_best_result=best_res
@@ -55,12 +55,15 @@ class Strategy:
         if save:
             for key,value in kwargs.items():
                 self.data.df.at[index, key] = value
+
+
     def __save_prep(self,save  ):
         if save:
             self.data.df[f'total_profit']=0
             self.data.df[f'position']=''
             self.data.df[f'shares']=0
             self.data.df[f'capital']=0
+        
 
         
     def calculate_profit(self,sig,price_ser=None,save  = False ):
@@ -84,12 +87,137 @@ class Strategy:
             if signal == 0 and shares > 0:
                 capital = shares * price
                 shares = 0
-                self.__save(i,save,price=price,position=f'LONG',shares=shares,capital=capital)
+                self.__save(i,save,price=price,position=f'SHORT',shares=shares,capital=capital)
                     
             current_value=capital if shares==0 else shares*price
             if current_value<0:
                 print('error')
 
+            self.__save(i,save,total_profit=current_value-initial_capital)
+            
+        return current_value-initial_capital
+
+
+    def calculate_profit_scalp(self, sig, price_ser=None, save=False, scalp_ratio=0.5):
+        """
+        Calculate profit based on scalping strategy.
+
+        Parameters:
+        - sig: pandas Series with signals (1 for LONG, 0 for SHORT)
+        - price_ser: pandas Series with price data (defaults to 'close' prices)
+        - save: bool, whether to save transaction details
+        - scalp_ratio: float, fraction of capital to use per trade (e.g., 0.1 for 10%)
+
+        Returns:
+        - total_profit: float, total profit/loss from the strategy
+        """
+        self.__save_prep(save)  # Prepare data if save is True
+        initial_capital = 100.0
+        capital = initial_capital
+        total_profit=0
+        shares = 0
+        position = 'NONE'  # Possible values: 'LONG', 'SHORT', 'NONE'
+
+        if price_ser is None:
+            price_ser = self.data.df['close']
+
+        for i, signal in sig.items():
+            # Calculate scalp as a fraction of current capital
+            scalp = scalp_ratio * capital
+            scalp = min(scalp, capital,initial_capital)  # Ensure scalp does not exceed capital
+
+            price = price_ser[i]
+
+            # Debugging Statements (Can be uncommented for detailed tracing)
+            # print(f"Date: {i}, Signal: {signal}, Price: {price}")
+            # print(f"Current Position: {position}, Shares: {shares}, Capital: {capital}, Scalp: {scalp}")
+
+            # Skip if the signal is the same as the current position
+            if signal == 1 and position == 'LONG':
+                self.__save(i, save, price=price, position='NONE', shares=shares, capital=capital, position_size=0,total_profit=total_profit)
+
+            if signal == 0 and position == 'SHORT':
+                  # Already in SHORT, skip
+                self.__save(i, save, price=price, position='NONE', shares=shares, capital=capital, position_size=0,total_profit=total_profit)
+
+            # Enter LONG Position
+            if signal == 1 and position != 'LONG':
+                position = 'LONG'
+                shares = scalp / price if price != 0 else 0  # Avoid division by zero
+                invested_amount = shares * price
+                capital -= invested_amount  # Deduct the invested capital
+                self.__save(i, save, price=price, position='LONG', shares=shares, capital=capital, position_size=invested_amount)
+                # print(f"Entered LONG: Shares={shares}, Invested={invested_amount}, Capital={capital}")
+
+            # Exit LONG Position and Enter SHORT Position
+            elif signal == 0 and position == 'LONG' and shares > 0:
+                proceeds = shares * price
+                capital += proceeds  # Add the proceeds from selling shares
+                self.__save(i, save, price=price, position='SHORT', shares=0, capital=capital, position_size=proceeds)
+                shares = 0
+                position = 'SHORT'
+                # print(f"Exited LONG and Entered SHORT: Proceeds={proceeds}, Capital={capital}")
+
+            # Calculate Current Value
+            current_value = capital + (shares * price)
+
+            # Error Handling
+            if current_value < 0:
+                print(f'Error: Negative portfolio value on {i}. Current Value: {current_value}')
+                # Optionally, raise an exception or handle it accordingly
+                # raise ValueError(f'Negative portfolio value on {i}')
+
+            # Save Total Profit
+            self.__save(i, save, total_profit=current_value - initial_capital)
+            total_profit=current_value - initial_capital
+
+        # Final Portfolio Valuation
+        final_price = price_ser.iloc[-1]
+        final_current_value = capital + (shares * final_price)
+        total_profit = final_current_value - initial_capital
+        return total_profit
+
+
+    def old_calculate_profit_scalp(self,sig,price_ser=None,save  = False ):
+        self.__save_prep(save) # if save passed prepare self.data.df for saving data 
+        initial_capital,shares = 100.0,0
+        capital=initial_capital
+
+        if price_ser is None:
+            price_ser=self.data.df['close']
+            
+        position='SHORT'
+        scalp=initial_capital 
+        for i, row in sig.items():
+            scalp  = min(scalp, capital )
+            
+            signal = sig[i]
+            price =price_ser[i]
+            
+            
+            if signal == 1 and position == 'LONG':
+                continue  # Already in LONG, skip
+            if signal == 0 and position == 'SHORT':
+                continue  # Already in SHORT, skip
+            # Buy
+            if signal == 1 and position =='SHORT':
+                position='LONG'
+                shares = scalp  / price 
+                capital = capital-scalp 
+                self.__save(i,save,price=price,position=f'LONG',shares=shares,capital=capital,position_size=scalp)
+
+            # Sell
+            if signal == 0 and shares > 0 and position=='LONG':
+                position='SHORT'
+                _ = shares * price
+                shares = 0
+                capital = capital + _
+                
+                self.__save(i,save,price=price,position=f'SHORT',shares=shares,capital=capital,position_size=_)
+                    
+            current_value=capital if shares==0 else shares*price
+            if current_value<0:
+                print('error')
 
             self.__save(i,save,total_profit=current_value-initial_capital)
             

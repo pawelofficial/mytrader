@@ -5,6 +5,7 @@ import ms.data
 import ms.strategy
 import pandas as pd 
 from matplotlib import pyplot as plt
+from tabulate import tabulate
 
 #d=ms.Downloader()
 #d.download_historical_data()
@@ -26,10 +27,18 @@ comparison_date = pd.to_datetime('1995-01-01').tz_localize('UTC')
 
 s=ms.strategy.Strategy(d)
 s.ema_strategy(ema1='ema_10',ema2='ema_20',sign='<')
-sig =s.strategy(params=[-2.94403494])
+sig =s.strategy(params=[-2.94403494])  # -5.674305 -2.94403494
 d.df['signal']=sig
-#profit=s.calculate_profit_all_in(signal_column='sig')
-profit2=s.calculate_profit(sig,save=True)
+profit2=s.calculate_profit_scalp(sig,save=True)
+#profit2=s.calculate_profit(sig,save=True)
+print(profit2)
+exit(1)
+cols=['datetime','close','position','total_profit','shares','position_size','capital']
+N=100
+msk=d.df['position']!='NONE'
+print(tabulate(s.data.df[msk][cols].iloc[:N] , headers='keys', tablefmt='pretty'))
+
+
 #print(profit,profit2)
 s.optimize()
 #s.optimize()
