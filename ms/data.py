@@ -24,18 +24,39 @@ class Data:
         self.logger=setup_logger('data')
         self.__read_data()
         self.base_columns=['open','close','low','high']
-        self.tickers_map={'SPX':'^GSPC'}    
+        self.tickers_map={'SPX':'^GSPC','BTC':'BTC-USD'}    
     
-    def __read_data(self,fname='SPX.csv'):
+    def __read_data(self,fname='BTC.csv'):
         """ reads data from data folder """
         self.logger.info(f'reading data from {fname}')
         self.df=pd.read_csv( os.path.join(self.data_path, fname))
+        # build datetime from unixtime
+        self.df['datetime']=pd.to_datetime(self.df['datetime'])
         # assert no nans 
         assert self.df.isnull().values.any()==False
 
+    def filter(self,start_date=None,end_date=None):
+        if start_date=='start':
+            start_date=self.df['datetime'].min()
+        else:
+            start_date=pd.to_datetime(start_date,utc=True)        
+
+               
+        self.df=self.df[self.df['datetime']>=start_date]
+
+        if end_date=='today':
+            end_date= self.df['datetime'].max()
+        else:
+            end_date=pd.to_datetime(end_date,utc=True)
+
+        
+        self.df=self.df[self.df['datetime']<=end_date]
+ 
+            
+
     def _download_historical_data(self
-                                 ,ticker='SPX'
-                                 ,start_ts = '1990-01-01' # yyyy-mm-dd 
+                                 ,ticker='BTC'
+                                 ,start_ts = '2023-02-01' # yyyy-mm-dd 
                                  ,end_ts   = 'today' 
                                  ,interval = '1d'                
                                  ,save=True      
@@ -69,7 +90,10 @@ class Data:
             data['unixtime']=data['date'].astype('int64') / 10**9
             data.rename(columns={'date':'datetime'},inplace=True)
             # cast to datetime 2024-12-31 20:30:00+00:00
-            data['datetime']=pd.to_datetime(data['datetime']).dt.tz_localize('UTC')
+            if data['datetime'].dt.tz is None:
+                data['datetime'] = data['datetime'].dt.tz_localize('UTC')
+            else:
+                data['datetime'] = data['datetime'].dt.tz_convert('UTC')
         else:
             print('no date column in data ')
             print(data.columns)

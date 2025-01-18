@@ -4,6 +4,7 @@ from ms.utils import setup_logger
 from ms.data import Data
 import numpy as np 
 import pandas as pd 
+import mplfinance as mpf
 
 class Plotter:
     def __init__(self,df):
@@ -21,8 +22,8 @@ class Plotter:
                               ,show=True
                               ,save=True
                               ,subplot=(False, ) # ( True, columnn_name)
-                              ,start_date='start' # yyyy-mm-dd 
-                              ,end_date='1995-01-01' # yyyy-mm-dd  'today'
+                              ,start_date=None # 'start' # yyyy-mm-dd 
+                              ,end_date=None#'1995-01-01' # yyyy-mm-dd  'today'
                               ,log_scale=False
                               ,fname='simplest_scatter_plot.png'): 
         if start_date is not None:
@@ -66,3 +67,128 @@ class Plotter:
         if save:
             plt.savefig(os.path.join(self.plots_path,fname))
             
+
+
+
+    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='signal',total_profit_column='total_profit'):
+        if df is None:
+            df = self.df.copy()
+    
+        required_columns = {'open', 'close', 'low', 'high', 'volume'}
+        if not required_columns.issubset(df.columns.str.lower()):
+            raise ValueError(f"DataFrame must contain columns: {required_columns}")
+    
+        # Ensure the DataFrame index is a DatetimeIndex
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.set_index(pd.to_datetime(df[date_column]), inplace=True)
+    
+        if signal_column_name not in df.columns:
+            df['signal'] = 0  # Default to no signals
+        else:
+            # Ensure signals are 1 (buy) or -1 (sell)
+            df['signal'] = df['signal'].apply(lambda x: x if x in [1, -1] else 0)
+    
+        # Create full-length series for buy and sell signals
+        buy_signal = pd.Series(data=np.nan, index=df.index)
+        sell_signal = pd.Series(data=np.nan, index=df.index)
+    
+        buy_indices = df[df['signal'] == 1].index
+        sell_indices = df[df['signal'] == -1].index
+    
+        buy_signal.loc[buy_indices] = df.loc[buy_indices, 'low'] - (df['low'].min() * 0.01)
+        sell_signal.loc[sell_indices] = df.loc[sell_indices, 'high'] + (df['high'].min() * 0.01)
+    
+        # Create addplot for buy signals
+        addplots = []
+        if not buy_indices.empty:
+            buy_markers = mpf.make_addplot(
+                buy_signal,
+                type='scatter',
+                markersize=100,
+                marker='^',
+                color='g',
+                label='Buy Signal'
+            )
+            addplots.append(buy_markers)
+    
+        # Create addplot for sell signals
+        if not sell_indices.empty:
+            sell_markers = mpf.make_addplot(
+                sell_signal,
+                type='scatter',
+                markersize=100,
+                marker='v',
+                color='r',
+                label='Sell Signal'
+            )
+            addplots.append(sell_markers)
+        if total_profit_column:
+            total_profit_line = mpf.make_addplot(
+                df[total_profit_column],
+                panel=1,
+                color='b',
+                secondary_y=True,
+                ylabel='Total Profit',
+
+            )
+            addplots.append(total_profit_line)
+    
+    
+        # Optional: Set the style of the plot
+        style = mpf.make_mpf_style(
+            base_mpf_style='yahoo',
+            rc={'font.size': 10}
+        )
+    
+        # Plot with addplots
+        mpf.plot(
+            df,
+            type='candle',
+            style=style,
+            volume=True,
+            addplot=addplots,
+            title='Stock Candlestick Chart with Buy/Sell Signals',
+            ylabel='Price',
+            ylabel_lower='Volume',
+            figsize=(12, 8),
+            tight_layout=True
+        )
+        # add total profit line plot on secondary y axis 
+
+    
+    
+        # Create a legend
+        handles = []
+        labels = []
+        if not buy_indices.empty:
+            handles.append(plt.Line2D([], [], marker='^', color='g', linestyle='None'))
+            labels.append('Buy Signal')
+        if not sell_indices.empty:
+            handles.append(plt.Line2D([], [], marker='v', color='r', linestyle='None'))
+            labels.append('Sell Signal')
+    
+        if handles:
+            plt.legend(handles, labels, loc='upper left')
+
+
+
+# Example usage
+if __name__ == "__main__":
+    # Sample data
+    data = {
+        'open': [100, 102, 101, 105],
+        'close': [102, 101, 105, 107],
+        'low': [99, 100, 100, 104],
+        'high': [103, 103, 106, 108],
+        'volume': [1000, 1500, 1200, 1300]
+    }
+
+    # Create a date range
+    dates = pd.date_range(start='2023-01-01', periods=4, freq='D')
+
+    # Create DataFrame
+    df = pd.DataFrame(data, index=dates)
+
+    # Plot the candlestick chart
+    plot_candlestick(df)
+    
