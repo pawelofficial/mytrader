@@ -9,35 +9,45 @@ class Strategy:
     def __init__(self,data:Data):
         self.data=data
         
-    def optimize(self, method='nelder-mead', dim=1, options=None,stop_ratio=0.01,N=20,search_span=-10 ):
+
+
+    def optimize(self, method='nelder-mead', dim=1, options=None, stop_ratio=0.01, N=10, search_span=5):
         if options is None:
             options = {'maxiter': 1000, 'maxfev': 2000}
 
         def f(params):
             return -self.calculate_profit(self.strategy(params=params))
 
-        best_res = None
-        prev_best_fun = None  # track the previous fun (not the negative)
-
+        
+        best_best_result=None
         while True:
-            
+            best_res=None 
             for _ in range(N):
                 init_guess = np.random.uniform(-search_span, search_span, size=dim)
                 res = minimize(f, init_guess, method=method, options=options)
-                if best_res is None or res.fun < best_res.fun:
-                    best_res = res
 
-            # compare new best vs previous
-            print('next iteration',best_res.fun , prev_best_fun )
-            if prev_best_fun is not None:
-                ratio = best_res.fun / prev_best_fun
-                if 1-stop_ratio < ratio < 1+stop_ratio:  # no big improvement
-                    break
+                if best_res is None or -res.fun>-best_res.fun:
+                    best_res=res
+                
+                print("params:", res.x)
+                print("profit:", -res.fun)
+            
+            print(" best params:", best_res.x)
+            print(" best profit:", -best_res.fun)
+            
+            if best_best_result is None: # is the best result is None set current best result as the best result 
+                best_best_result=best_res
+            elif abs ( 1 - best_res.fun/best_best_result.fun ) < stop_ratio: # if best result and the best result are close then stop 
+                print('found')
+                break
+            elif -best_res.fun>-best_best_result.fun:                          # if best result is better than the best result set it as the best result
+                best_best_result=best_res
 
-            prev_best_fun = best_res.fun
 
-        print("Best params:", best_res.x)
-        print("Max profit:", -best_res.fun)
+        print("     the best params:", best_best_result.x)
+        print("     the best profit:", -best_best_result.fun)
+
+
 
 
 
@@ -53,7 +63,7 @@ class Strategy:
             self.data.df[f'capital']=0
 
         
-    def calculate_profit(self,sig,price_ser=None,save  = True ):
+    def calculate_profit(self,sig,price_ser=None,save  = False ):
         self.__save_prep(save) # if save passed prepare self.data.df for saving data 
         initial_capital,shares = 100.0,0
         capital=initial_capital

@@ -22,7 +22,7 @@ d.df['datetime'] = pd.to_datetime(d.df['datetime'], utc=True)
 # Convert the comparison date to the same timezone
 comparison_date = pd.to_datetime('1995-01-01').tz_localize('UTC')
 # Filter the DataFrame
-d.df = d.df[d.df['datetime'] < comparison_date]
+#d.df = d.df[d.df['datetime'] < comparison_date]
 
 s=ms.strategy.Strategy(d)
 s.ema_strategy(ema1='ema_10',ema2='ema_20',sign='<')
@@ -31,7 +31,7 @@ d.df['signal']=sig
 #profit=s.calculate_profit_all_in(signal_column='sig')
 profit2=s.calculate_profit(sig,save=True)
 #print(profit,profit2)
-#s.optimize()
+s.optimize()
 #s.optimize()
 
 # make df from price and ema_signal_close
