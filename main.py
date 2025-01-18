@@ -42,11 +42,13 @@ d.normalize()
 
 
 s=ms.strategy.Strategy(d)
-s.ema_strategy(ema1='ema_10',ema2='ema_20',sign='<')
+
+# create a strategy 
 sig =s.strategy(params=[-3.50914227])  # -5.674305 -2.94403494
+# trade the strategy 
 profit2=s.calculate_profit_scalp(sig,save=True)
-#profit2=s.calculate_profit(sig,save=True)
-d.df['signal']=sig
+
+# 
 map={'NONE':0,'LONG':1,'SHORT':-1}
 d.df['signal']=d.df['position'].apply(lambda x: map[x])
 print(d.df)
@@ -66,6 +68,7 @@ print(tabulate(s.data.df[msk][cols].iloc[:N] , headers='keys', tablefmt='pretty'
 
 #print(profit,profit2)
 s.optimize()
+exit(1)
 #s.optimize()
 
 # make df from price and ema_signal_close

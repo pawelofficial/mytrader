@@ -70,7 +70,7 @@ class Plotter:
 
 
 
-    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='signal',total_profit_column='total_profit'):
+    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='position',total_profit_column='total_profit'):
         if df is None:
             df = self.df.copy()
     
@@ -84,16 +84,14 @@ class Plotter:
     
         if signal_column_name not in df.columns:
             df['signal'] = 0  # Default to no signals
-        else:
-            # Ensure signals are 1 (buy) or -1 (sell)
-            df['signal'] = df['signal'].apply(lambda x: x if x in [1, -1] else 0)
+
     
         # Create full-length series for buy and sell signals
         buy_signal = pd.Series(data=np.nan, index=df.index)
         sell_signal = pd.Series(data=np.nan, index=df.index)
     
-        buy_indices = df[df['signal'] == 1].index
-        sell_indices = df[df['signal'] == -1].index
+        buy_indices = df[df[signal_column_name] == 'LONG'].index
+        sell_indices = df[df[signal_column_name] == 'SHORT'].index
     
         buy_signal.loc[buy_indices] = df.loc[buy_indices, 'low'] - (df['low'].min() * 0.01)
         sell_signal.loc[sell_indices] = df.loc[sell_indices, 'high'] + (df['high'].min() * 0.01)
