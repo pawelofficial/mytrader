@@ -1,0 +1,3 @@
+# another try of making a trading bot that makes money...
+
+![image](https://github.com/user-attachments/assets/c36ab1fc-99a9-4e49-b2b4-fd6a8a79d1bc)
