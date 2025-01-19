@@ -8,23 +8,21 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tabulate import tabulate
 import random 
-#d=ms.Downloader()
-#d.download_historical_data()
 
-tb=ms.trade_binance.Trade()
-btc=tb.get_balance('BTC')
-usdt=tb.get_balance('USDT')
-print(usdt,btc)
-
-#o,amos=tb.buy('bitek', 20)
+#
+#tb=ms.trade_binance.Trade()
+#btc=tb.get_balance('BTC')
+#usdt=tb.get_balance('USDT')
+#print(usdt,btc)
+#
+##o,amos=tb.buy('bitek', 20)
+##print(tb.last_order)
+##print(amos)
+##qty=tb.get_balance('BTC')
+#o,amos=tb.sell('bitek',-1)
 #print(tb.last_order)
-#print(amos)
-#qty=tb.get_balance('BTC')
-o,amos=tb.sell('bitek',-1)
-print(tb.last_order)
-#print(amos)
-exit(1)
-
+##print(amos)
+#exit(1)
 
 
 
@@ -42,10 +40,6 @@ def plot_candlestick(df=None
         df=df[df[datetime_colunm]>=start_date] 
         df=df[df[datetime_colunm]<=end_date]
     
-    ## make random signal 
-    #df['signal']=0
-    #df['signal'] = df['signal'].apply(lambda x: 1 if random.random() > 0.9 else -1)
-    #print(df)
     p=ms.plotter.Plotter(df)
     p.candleplot()
 
@@ -58,14 +52,14 @@ d.recalculate_all()
 d.normalize()
 
 ##3. filter data 
-d.filter(start_date='2025-01-01',end_date='2025-01-14')
+#d.filter(start_date='2025-01-01',end_date='2025-01-14')
 
 ##4. run a strategy
 s=ms.strategy.Strategy(d)
 
 # run a strategy 
-if 1:
-    sig =s.strategy(params=[-3.50914227])  # -5.674305 -2.94403494
+if 0:
+    sig =s.strategy(params=[-5.06580535])  # -4.24927704
     profit2=s.calculate_profit_scalp(sig,save=True)
     print(profit2)
 
@@ -75,11 +69,12 @@ if 1:
     print(d.df)
     
     plot_candlestick(d.df)
-#    exit(1)
+    exit(1)
 
-# optimize 
-
-#profit2=s.calculate_profit(sig,save=True)
+s.optimize()
+profit2=s.calculate_profit_scalp(sig,save=True)
+print(profit2)
+exit(1)
 
 cols=['datetime','close','position','total_profit','shares','position_size','capital']
 N=100

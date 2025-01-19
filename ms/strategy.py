@@ -119,12 +119,12 @@ class Strategy:
         position = 'NONE'  # Possible values: 'LONG', 'SHORT', 'NONE'
 
         if price_ser is None:
-            price_ser = self.data.df['close']
+            price_ser = self.data.df['real_close']
 
         for i, signal in sig.items():
             # Calculate scalp as a fraction of current capital
             scalp = scalp_ratio * capital
-            #scalp = min(scalp, capital,initial_capital)  # Ensure scalp does not exceed capital
+            scalp = min(scalp, initial_capital*scalp_ratio)  # Ensure scalp does not exceed capital
 
             price = price_ser[i]
 

@@ -56,7 +56,7 @@ class Data:
 
     def _download_historical_data(self
                                  ,ticker='BTC'
-                                 ,start_ts = '2023-02-01' # yyyy-mm-dd 
+                                 ,start_ts = '2024-12-01' # yyyy-mm-dd 
                                  ,end_ts   = 'today' 
                                  ,interval = '1d'                
                                  ,save=True      
@@ -65,7 +65,7 @@ class Data:
         
         if end_ts=='today':
             end_ts= pd.to_datetime(pd.to_datetime(pd.Timestamp.now().normalize()))    
-        
+
         start_ts = pd.to_datetime(start_ts) if start_ts is not None else None
         end_ts = pd.to_datetime(end_ts) if end_ts is not None else None
         
@@ -209,7 +209,7 @@ class Data:
 
 
     def normalize(self,norm_column='sma_50'):
-        
+        self.df['real_close']=self.df['close'] # save close column
         for col in self.base_columns:
             self.df[col] -= self.df[norm_column]
         min_val = self.df[self.base_columns].min().min()

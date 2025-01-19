@@ -34,7 +34,7 @@ class Trade:
                              ,dollars_to_spend=20 # how much in dollars you want to spend , precendence over capital_ratio
                              ,capital_ratio=1
                              ,all_in_when_negative = (True,'capital_ratio',0.95) # to do - goo all in if capital_ratio and rounding caused too big of an order 
-                            ,N=6
+                             ,N=6
                              ): # how much of your capital you want to spend
         capital=self.get_balance(asset)
         dollars_to_spend=dollars_to_spend or capital * capital_ratio
