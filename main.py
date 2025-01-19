@@ -30,41 +30,43 @@ def plot_candlestick(df=None
     p=ms.plotter.Plotter(df)
     p.candleplot()
 
-
-
-
-
 d=ms.data.Data()
+##1. download data 
 #d._download_historical_data(interval='1h')
 d.recalculate_all()
+
+##2. normalize data 
 d.normalize()
-#d.filter(start_date='2024-01-01',end_date='2024-01-14')
 
+##3. filter data 
+d.filter(start_date='2025-01-01',end_date='2025-01-14')
 
+##4. run a strategy
 s=ms.strategy.Strategy(d)
 
-# create a strategy 
-sig =s.strategy(params=[-3.50914227])  # -5.674305 -2.94403494
-# trade the strategy 
-profit2=s.calculate_profit_scalp(sig,save=True)
+# run a strategy 
+if 1:
+    sig =s.strategy(params=[-3.50914227])  # -5.674305 -2.94403494
+    profit2=s.calculate_profit_scalp(sig,save=True)
+    print(profit2)
 
-# 
-map={'NONE':0,'LONG':1,'SHORT':-1}
-d.df['signal']=d.df['position'].apply(lambda x: map[x])
-print(d.df)
-plot_candlestick(d.df)
-exit(1)
+    
+    map={'NONE':0,'LONG':1,'SHORT':-1,'' : 0}
+    d.df['signal']=d.df['position'].apply(lambda x: map[x])
+    print(d.df)
+    
+    plot_candlestick(d.df)
+#    exit(1)
 
+# optimize 
 
-profit2=s.calculate_profit_scalp(sig,save=True)
-print(profit2)
 #profit2=s.calculate_profit(sig,save=True)
 
 cols=['datetime','close','position','total_profit','shares','position_size','capital']
 N=100
 msk=d.df['position']!='NONE'
 print(tabulate(s.data.df[msk][cols].iloc[:N] , headers='keys', tablefmt='pretty'))
-
+exit(1)
 
 #print(profit,profit2)
 s.optimize()

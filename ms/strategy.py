@@ -124,7 +124,7 @@ class Strategy:
         for i, signal in sig.items():
             # Calculate scalp as a fraction of current capital
             scalp = scalp_ratio * capital
-            scalp = min(scalp, capital,initial_capital)  # Ensure scalp does not exceed capital
+            #scalp = min(scalp, capital,initial_capital)  # Ensure scalp does not exceed capital
 
             price = price_ser[i]
 
@@ -157,6 +157,14 @@ class Strategy:
                 shares = 0
                 position = 'SHORT'
                 # print(f"Exited LONG and Entered SHORT: Proceeds={proceeds}, Capital={capital}")
+
+            # stoploss 
+            #elif bought_price*0.95>price and position == 'LONG' and shares > 0:
+            #    proceeds = shares * price
+            #    capital += proceeds  # Add the proceeds from selling shares
+            #    self.__save(i, save, price=price, position='SHORT', shares=0, capital=capital, position_size=proceeds)
+            #    shares = 0
+            #    position = 'SHORT'
 
             # Calculate Current Value
             current_value = capital + (shares * price)

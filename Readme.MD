@@ -1,0 +1,1 @@
+# another try of making a trading bot that makes money 
