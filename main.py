@@ -3,12 +3,31 @@
 import ms
 import ms.data 
 import ms.strategy
+import ms.trade_binance 
 import pandas as pd 
 from matplotlib import pyplot as plt
 from tabulate import tabulate
 import random 
 #d=ms.Downloader()
 #d.download_historical_data()
+
+tb=ms.trade_binance.Trade()
+btc=tb.get_balance('BTC')
+usdt=tb.get_balance('USDT')
+print(usdt,btc)
+
+#o,amos=tb.buy('bitek', 20)
+#print(tb.last_order)
+#print(amos)
+#qty=tb.get_balance('BTC')
+o,amos=tb.sell('bitek',-1)
+print(tb.last_order)
+#print(amos)
+exit(1)
+
+
+
+
 
 def plot_candlestick(df=None
                      ,start_date='2025-01-01'
