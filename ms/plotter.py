@@ -70,9 +70,12 @@ class Plotter:
 
 
 
-    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='position',total_profit_column='total_profit'):
+    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='position',total_profit_column='total_profit',sig_bl_column='sig_bl'):
         if df is None:
             df = self.df.copy()
+        if df.empty:
+            raise ValueError("DataFrame is empty")
+            
     
         required_columns = {'open', 'close', 'low', 'high', 'volume'}
         if not required_columns.issubset(df.columns.str.lower()):
@@ -95,6 +98,23 @@ class Plotter:
     
         buy_signal.loc[buy_indices] = df.loc[buy_indices, 'low'] - (df['low'].min() * 0.01)
         sell_signal.loc[sell_indices] = df.loc[sell_indices, 'high'] + (df['high'].min() * 0.01)
+    
+        # signal bl 
+        #signal_bl_buy_indices = df[df[sig_bl_column].apply(lambda x: int(x)) == 1].index
+        df[sig_bl_column] = pd.to_numeric(df[sig_bl_column], errors='coerce')
+        signal_bl_buy = pd.Series(data=np.nan, index=df.index)
+        signal_bl_sell= pd.Series(data=np.nan, index=df.index)
+
+
+
+        # Identify indices where sig_bl_column indicates a buy signal (e.g., 1)
+        signal_bl_buy_indices = df[df[sig_bl_column] == 1].index
+        signal_bl_buy.loc[signal_bl_buy_indices] = df.loc[signal_bl_buy_indices, 'open'] - (df['open'].min() * 0.02)
+    
+        # Identify indices where 'sell' indicates a buy signal (e.g., 0)
+        signal_bl_sell_indices = df[df[sig_bl_column] == 0].index
+        signal_bl_sell.loc[signal_bl_sell_indices] = df.loc[signal_bl_sell_indices, 'open'] - (df['open'].min() * 0.02)
+                
     
         # Create addplot for buy signals
         addplots = []
@@ -120,6 +140,29 @@ class Plotter:
                 label='Sell Signal'
             )
             addplots.append(sell_markers)
+        
+        # signal_bl_buy_indices
+        signal_bl_markers = mpf.make_addplot(
+            signal_bl_buy,
+            type='scatter',
+            markersize=25,
+            marker='^',
+            color='orange',
+            label='Signal BL Buy'
+        )
+        addplots.append(signal_bl_markers)
+        
+        # signal_bl_sell_indices
+        signal_bl_markers = mpf.make_addplot(
+            signal_bl_sell,
+            type='scatter',
+            markersize=25,
+            marker='v',
+            color='blue',
+            label='Signal BL Buy'
+        )
+        addplots.append(signal_bl_markers)
+            
         if total_profit_column:
             total_profit_line = mpf.make_addplot(
                 df[total_profit_column],

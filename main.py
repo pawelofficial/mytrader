@@ -9,11 +9,68 @@ from matplotlib import pyplot as plt
 from tabulate import tabulate
 import random 
 
+
+def plot_candlestick(df=None
+                     ,start_date=None
+                     ,end_date=None
+                    ,datetime_colunm='unixtime'
+                     ):
+    # cast start date and end date to unixtime
+
+    
+    if df is None : 
+        d=ms.data.Data()
+        df=d.df
+
+    # filter df based on datetime columns    
+    if start_date is not None or end_date is not None:
+        start_date=pd.to_datetime(start_date).timestamp()
+        end_date=pd.to_datetime(end_date).timestamp()
+        df[datetime_colunm]=df[datetime_colunm].astype(int)
+        min_dt=df[datetime_colunm].min()
+        max_dt=df[datetime_colunm].max()
+        df=df[df[datetime_colunm]>=start_date] 
+        df=df[df[datetime_colunm]<=end_date]
+    if df.empty:
+        print(f'df got filtered out {min_dt}, {max_dt}')
+        return
+    
+    p=ms.plotter.Plotter(df)
+    p.candleplot()
+
+
+def backtest(normalize=True):
+    d=ms.data.Data()
+    d.recalculate_all()
+    if normalize:
+        d.normalize()
+    s=ms.strategy.Strategy(d)
+    sig =s.strategy(params=[-5.06580535])  # -4.24927704
+    d.df['sig_bl']=sig
+    profit2=s.calculate_profit_scalp(sig,save=True)
+    map={'NONE':0,'LONG':1,'SHORT':-1,'' : 0}
+    d.df['signal']=d.df['position'].apply(lambda x: map[x])
+    cols=['datetime','unixtime', 'sig_bl','signal','position','total_profit','shares','position_size','capital']
+    print(d.df[cols])
+    d.df[cols].to_csv('results.csv',index=False,sep='|')
+    plot_candlestick(d.df)
+        
+    
+    
+backtest()
+exit(1)
+    
+
+
+
 #
-#tb=ms.trade_binance.Trade()
-#btc=tb.get_balance('BTC')
-#usdt=tb.get_balance('USDT')
-#print(usdt,btc)
+tb=ms.trade_binance.Trade()
+btc=tb.get_balance('BTC')
+usdt=tb.get_balance('USDT')
+print(usdt,btc)
+print(btc)
+exit(1)
+
 #
 ##o,amos=tb.buy('bitek', 20)
 ##print(tb.last_order)

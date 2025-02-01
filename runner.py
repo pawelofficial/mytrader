@@ -5,6 +5,9 @@ import ms.trade_binance
 import pandas as pd 
 import time 
 
+from ms.utils import setup_logger
+logger=setup_logger('runner')
+
  
 
 
@@ -49,17 +52,33 @@ print(btc,usdt)
 d=ms.data.Data()
 
 while True:
-    bl=c.check_clock()
+    try:
+        bl=c.check_clock()
+        logger.info(f'retrying clock')
+    except Exception as e:
+        time.eleep(61)
+        bl=c.check_clock()
+    
     if not bl:
-        print('waiting for clock')
+        logger.info('waiting for clock')
         time.sleep(45)
         continue
     else:
-        print('lets go!')
-        d._download_historical_data(interval='5m'
-                                    ,start_ts=pd.to_datetime(pd.to_datetime(pd.Timestamp.now().normalize()+ pd.DateOffset(minutes=-5)))   
-                                    ,end_ts=pd.to_datetime(pd.Timestamp.now().normalize() + pd.DateOffset(days=1))  # tomorrow
-                                    )
+        
+        logger.info('lets go!')
+        try:
+            d._download_historical_data(interval='5m'
+                                        ,start_ts=pd.to_datetime(pd.to_datetime(pd.Timestamp.now().normalize()+ pd.DateOffset(days=-1)))   
+                                        ,end_ts=pd.to_datetime(pd.Timestamp.now().normalize() + pd.DateOffset(days=1))  # tomorrow
+                                        )
+        except Exception as e:
+            logger.error(f'retrying download')
+            time.sleep(61)
+            d._download_historical_data(interval='5m'
+                                        ,start_ts=pd.to_datetime(pd.to_datetime(pd.Timestamp.now().normalize()+ pd.DateOffset(days=-1)))   
+                                        ,end_ts=pd.to_datetime(pd.Timestamp.now().normalize() + pd.DateOffset(days=1))  # tomorrow
+                                        )
+            
 
         d.recalculate_all()
         s=ms.strategy.Strategy(d)
@@ -69,13 +88,16 @@ while True:
 
         last_trade=tb.last_order['side']
         if signal ==1:
-            if last_trade=='SELL':
-                print('buying')
+            logger.info('signal 1 ')
+            if last_trade=='SELL' or last_trade==None:
+                logger.info('buying')
                 o,amos=tb.buy('bitek', 20)
-                print(tb.last_order)
+                logger.info(tb.last_order)
+                
         elif signal !=1 :
-            if last_trade=='BUY':
-                print('selling')
+            logger.info('signal -1 ')
+            if last_trade=='BUY' or last_trade==None:
+                logger.info('selling')
                 o,amos=tb.sell('bitek',-1)
-                print(tb.last_order)
+                logger.info(tb.last_order)
         time.sleep(45)
