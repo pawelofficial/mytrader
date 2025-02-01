@@ -4,9 +4,10 @@ import ms
 
 d=ms.data.Data()
 
-d._download_historical_data(interval='1h'
-                            ,start_ts='week_ago'
-                            ,end_ts='today')
+
+
+d.get_binance_candles('BTCUSDT',interval='1h',limit=300)
+
 
 d.recalculate_all()
 s=ms.strategy.Strategy(d)

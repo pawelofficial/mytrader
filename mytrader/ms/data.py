@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import yfinance as yf
+import datetime
+import requests
 from ms.utils import setup_logger
 
 def update_columns_after(func):
@@ -16,8 +18,8 @@ class Data:
         self.this_path = os.path.dirname(os.path.abspath(__file__))
         self.data_path = os.path.join(self.this_path, 'data')
         self.logger = setup_logger('data')
-        self.base_columns = ['open', 'close', 'low', 'high']
-        self.tickers_map = {'SPX': '^GSPC', 'BTC': 'BTC-USD'}
+        self.base_columns = ['open', 'close', 'low', 'high','volume']
+        self.tickers_map = {'SPX': '^GSPC', 'BTC': 'BTC-USD','BTCUSDT':'BTC'}
         self.fname = fname
         self.__read_data()
 
@@ -26,7 +28,9 @@ class Data:
         file_path = os.path.join(self.data_path, self.fname)
         # check if file exists 
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"File {file_path} not found")
+            print('file does not exist - download it ')
+            return 
+            #raise FileNotFoundError(f"File {file_path} not found")
         
         self.df = pd.read_csv(file_path)
         self.df['datetime'] = pd.to_datetime(self.df['datetime'])
@@ -58,6 +62,76 @@ class Data:
         end_date = self.__parse_date_words(end_date)
         
         self.df = self.df[(self.df['datetime'] >= start_date) & (self.df['datetime'] <= end_date)]
+
+    def map_interval(self,interval):
+        dic={'1m':0,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240,'1d':1440}
+        return dic[interval]
+
+    def get_binance_candles(self,symbol, interval="1m", limit=1000, startTime=None, endTime=None,save=True):
+        url = "https://api.binance.com/api/v3/klines"
+        params = {"symbol": symbol, "interval": interval, "limit": limit}
+        if startTime:
+            params["startTime"] = startTime
+        if endTime:
+            params["endTime"] = endTime
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        candles = response.json()
+
+        # Format each candle as a list
+        formatted_candles= [
+            [
+                candle[0],    # Open time
+                candle[1],    # Open price
+                candle[2],    # High price
+                candle[3],    # Low price
+                candle[4],    # Close price
+                candle[5],    # Volume
+                candle[6],    # Close time
+                candle[7],    # Quote asset volume
+                candle[8],    # Number of trades
+                candle[9],    # Taker buy base asset volume
+                candle[10],   # Taker buy quote asset volume
+                candle[11]    # Ignore
+            ]
+            for candle in candles
+        ]
+
+
+        dic={'unixtimestamp':formatted_candles[0][0]
+             ,'close_time':formatted_candles[0][6]
+             ,'datetime':pd.to_datetime(formatted_candles[0][0],unit='ms')
+             ,'close_datetime':pd.to_datetime(formatted_candles[0][6],unit='ms')
+             ,'open':formatted_candles[0][1]
+             ,'close':formatted_candles[0][4]
+             ,'low':formatted_candles[0][3]
+             ,'high':formatted_candles[0][2]
+             ,'volume':formatted_candles[0][5]
+             }
+        df=pd.DataFrame(columns=list(dic.keys()))
+        for candle in formatted_candles:
+            dic={'unixtimestamp':candle[0]
+                 ,'close_time':candle[6]
+                 ,'datetime':pd.to_datetime(candle[0],unit='ms')
+                 ,'close_datetime':pd.to_datetime(candle[6],unit='ms')
+                 ,'open':candle[1]
+                 ,'close':candle[4]
+                 ,'low':candle[3]
+                 ,'high':candle[2]
+                ,'volume':candle[5]
+                 }
+            df.loc[len(df)]=dic
+
+        # cast base columns to float
+        for col in self.base_columns:
+            df[col]=df[col].astype(float)
+
+        self.df=df
+        if save:
+            df.to_csv(os.path.join(self.data_path, f'{self.tickers_map[symbol]}.csv'))
+
+        return df
+
 
     def _download_historical_data(self, ticker='BTC'
                                   , start_ts='2024-12-01'
@@ -92,6 +166,7 @@ class Data:
         if save:
             data.index.name = 'index'
             data.to_csv(os.path.join(self.data_path, f'{ticker}.csv'))
+        self.df=data
 
         return data
 
@@ -138,7 +213,7 @@ class Data:
             self.df[f'ema_{ema}_der'] = (
                 self.df[f'ema_{ema}']
                 .diff()
-                .rolling(window=smooth, center=True, min_periods=1)
+                .rolling(window=smooth, center=True, min_periods=1) # center True introduces lookahead bias 
                 .mean()
                 .fillna(method='bfill')
                 .fillna(method='ffill')
