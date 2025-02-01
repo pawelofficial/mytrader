@@ -12,39 +12,72 @@ def update_columns_after(func):
     return wrapper
 
 class Data:
-    def __init__(self):
+    def __init__(self, fname='BTC.csv'):
         self.this_path = os.path.dirname(os.path.abspath(__file__))
         self.data_path = os.path.join(self.this_path, 'data')
         self.logger = setup_logger('data')
         self.base_columns = ['open', 'close', 'low', 'high']
         self.tickers_map = {'SPX': '^GSPC', 'BTC': 'BTC-USD'}
+        self.fname = fname
         self.__read_data()
 
-    def __read_data(self, fname='BTC.csv'):
-        self.logger.info(f'Reading data from {fname}')
-        file_path = os.path.join(self.data_path, fname)
+    def __read_data(self,):
+        self.logger.info(f'Reading data from {self.fname}')
+        file_path = os.path.join(self.data_path, self.fname)
+        # check if file exists 
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File {file_path} not found")
+        
         self.df = pd.read_csv(file_path)
         self.df['datetime'] = pd.to_datetime(self.df['datetime'])
         if self.df.isnull().values.any():
             raise ValueError("Data contains NaN values")
 
-    def filter(self, start_date=None, end_date=None):
-        start_date = self.df['datetime'].min() if start_date == 'start' else pd.to_datetime(start_date, utc=True)
-        end_date = self.df['datetime'].max() if end_date == 'today' else pd.to_datetime(end_date, utc=True)
+    def __parse_date_words(self, word):
+        if word not in ['start', 'yesterday', 'week_ago']:
+            return pd.to_datetime(word, utc=True)
+        if word == 'yesterday':
+            return pd.Timestamp.now().normalize()-pd.DateOffset(days=1)
+        if word == 'week_ago':
+            return pd.Timestamp.now().normalize()-pd.DateOffset(days=7)
+        if word =='month_ago':
+            return pd.Timestamp.now().normalize()-pd.DateOffset(months=1)
+        if word == 'start':
+            return self.df['datetime'].min()
+        if word == 'today':
+            return pd.Timestamp.now().normalize()
+        if word == 'end':
+            return pd.Timestamp.now().normalize()
+        
+        return pd.to_datetime(word, utc=True)
+
+    def filter(self
+               , start_date=None # start / yesterday / yyyy-mm-dd
+               , end_date=None): # today / yyyy-mm-dd
+        start_date = self.__parse_date_words(start_date)
+        end_date = self.__parse_date_words(end_date)
+        
         self.df = self.df[(self.df['datetime'] >= start_date) & (self.df['datetime'] <= end_date)]
 
-    def _download_historical_data(self, ticker='BTC', start_ts='2024-12-01', end_ts='today', interval='1d', save=True):
+    def _download_historical_data(self, ticker='BTC'
+                                  , start_ts='2024-12-01'
+                                  , end_ts='today'
+                                  , interval='1d'
+                                  , save=True):
         self.logger.info(f'Downloading {ticker} data from {start_ts} to {end_ts} at {interval} interval')
-        if end_ts == 'today':
-            end_ts = pd.Timestamp.now().normalize()
-        start_ts, end_ts = pd.to_datetime(start_ts), pd.to_datetime(end_ts)
-        if start_ts is None or end_ts is None:
-            raise ValueError("Timestamps cannot be None")
-        data = yf.download(self.tickers_map[ticker], start=start_ts, end=end_ts, interval=interval)
+        
+
+        start_ts = self.__parse_date_words(start_ts)
+        end_ts = self.__parse_date_words(end_ts)
+
+        data = yf.download(self.tickers_map[ticker], start=start_ts, end=end_ts, interval=interval,progress=False)
+
         self.logger.info(f'Downloaded data shape: {data.shape}')
         data.columns = data.columns.droplevel('Ticker')
         data.reset_index(inplace=True)
         data.columns = [col.lower() for col in data.columns]
+        
+        # depending on download interval, datetime column may not be present
         if 'datetime' in data.columns:
             data['unixtime'] = data['datetime'].astype('int64') // 10**9
             data['datetime'] = pd.to_datetime(data['datetime'])
@@ -55,9 +88,11 @@ class Data:
         else:
             self.logger.error("No date column found in data")
             raise ValueError("No date column in downloaded data")
+
         if save:
             data.index.name = 'index'
             data.to_csv(os.path.join(self.data_path, f'{ticker}.csv'))
+
         return data
 
     @property
@@ -81,6 +116,7 @@ class Data:
                 .fillna(method='bfill')
             )
             if self.df[f'ema_{ema}'].isnull().any():
+                print(self.df)
                 raise ValueError(f"NaN values found in ema_{ema}")
 
     @update_columns_after
@@ -93,6 +129,7 @@ class Data:
                 .fillna(method='bfill')
             )
             if self.df[f'sma_{sma}'].isnull().any():
+                print(self.df[f'sma_{sma}'])
                 raise ValueError(f"NaN values found in sma_{sma}")
 
     @update_columns_after
@@ -139,6 +176,10 @@ class Data:
             for col in self.base_columns:
                 self.df[col] += abs(min_val) + 1
         if self.df[self.base_columns].isnull().any().any():
+            # print nan values 
+            print(self.df[self.base_columns].isnull().sum())
+            print(self.df)
+            
             raise ValueError("NaN values found in base columns")
         self.recalculate_all()
 

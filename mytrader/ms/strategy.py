@@ -231,7 +231,7 @@ class Strategy:
             
         return current_value-initial_capital
     
-    def strategy(self,col1='ema_10',col2='ema_20',col3='ema_10_der',sign='<',params=[0]):
+    def strategy(self,col1='ema_10',col2='ema_20',col3='ema_10_der',sign='<',params=[0],save=False):
         #ser = self.data.df[col1] - self.data.df[col2] + params[0] * self.data.df[col3] + params[1] * self.data.df[col3]**2 + params[2] * self.data.df[col3]**3
         ser = self.data.df[col1] - self.data.df[col2]
         for i, param in enumerate(params):
@@ -240,6 +240,8 @@ class Strategy:
             sig=ser.apply(lambda x: 1 if x>0 else 0)
         else:        
             sig=ser.apply(lambda x: 1 if x<0 else 0)
+        if save:
+            self.data.df['sig_bl']=sig
         return sig
     
     def calculate_profit_all_in(self, signal_column='ema_signal', price_column='close'):

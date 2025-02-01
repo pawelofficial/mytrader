@@ -96,8 +96,8 @@ class Plotter:
         buy_indices = df[df[signal_column_name] == 'LONG'].index
         sell_indices = df[df[signal_column_name] == 'SHORT'].index
     
-        buy_signal.loc[buy_indices] = df.loc[buy_indices, 'low'] - (df['low'].min() * 0.01)
-        sell_signal.loc[sell_indices] = df.loc[sell_indices, 'high'] + (df['high'].min() * 0.01)
+        buy_signal.loc[buy_indices] = df.loc[buy_indices, 'low'] - (df['low'].min() * 0.00)
+        sell_signal.loc[sell_indices] = df.loc[sell_indices, 'high'] + (df['high'].min() * 0.00)
     
         # signal bl 
         #signal_bl_buy_indices = df[df[sig_bl_column].apply(lambda x: int(x)) == 1].index
@@ -109,11 +109,11 @@ class Plotter:
 
         # Identify indices where sig_bl_column indicates a buy signal (e.g., 1)
         signal_bl_buy_indices = df[df[sig_bl_column] == 1].index
-        signal_bl_buy.loc[signal_bl_buy_indices] = df.loc[signal_bl_buy_indices, 'open'] - (df['open'].min() * 0.02)
+        signal_bl_buy.loc[signal_bl_buy_indices] = df.loc[signal_bl_buy_indices, 'open'] - (df['open'].min() * 0.0)
     
         # Identify indices where 'sell' indicates a buy signal (e.g., 0)
         signal_bl_sell_indices = df[df[sig_bl_column] == 0].index
-        signal_bl_sell.loc[signal_bl_sell_indices] = df.loc[signal_bl_sell_indices, 'open'] - (df['open'].min() * 0.02)
+        signal_bl_sell.loc[signal_bl_sell_indices] = df.loc[signal_bl_sell_indices, 'open'] - (df['open'].min() * 0.0)
                 
     
         # Create addplot for buy signals
