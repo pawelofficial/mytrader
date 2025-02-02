@@ -4,6 +4,7 @@ import yfinance as yf
 import datetime
 import requests
 from ms.utils import setup_logger
+import numpy as np 
 
 def update_columns_after(func):
     """Update DataFrame columns as attributes after function execution."""
@@ -21,7 +22,24 @@ class Data:
         self.base_columns = ['open', 'close', 'low', 'high','volume']
         self.tickers_map = {'SPX': '^GSPC', 'BTC': 'BTC-USD','BTCUSDT':'BTC'}
         self.fname = fname
+        self.last_candle=None
         self.__read_data()
+
+
+
+    def delsert_df(self, row: pd.Series):
+        # Ensure row has all columns, fill missing with NaN
+        row = row.reindex(self.df.columns, fill_value=np.nan)
+        last_candle = self.df.iloc[-1]
+        if last_candle['close_time'] == row['close_time']:
+            # Update the last row
+            self.df.iloc[-1] = row
+            return self.df
+        
+        self.df.loc[len(self.df)]=row
+        # drop first row 
+        self.df=self.df.iloc[1:]
+        return self.df
 
     def __read_data(self,):
         self.logger.info(f'Reading data from {self.fname}')
@@ -67,6 +85,10 @@ class Data:
         dic={'1m':0,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240,'1d':1440}
         return dic[interval]
 
+    def get_last_candle(self):
+        df=self.get_binance_candles("BTCUSDT", interval="1m", limit=1,save=False)
+        return df.iloc[-1]
+
     def get_binance_candles(self,symbol, interval="1m", limit=1000, startTime=None, endTime=None,save=True):
         url = "https://api.binance.com/api/v3/klines"
         params = {"symbol": symbol, "interval": interval, "limit": limit}
@@ -85,7 +107,7 @@ class Data:
                 candle[1],    # Open price
                 candle[2],    # High price
                 candle[3],    # Low price
-                candle[4],    # Close price
+                candle[4],    # latest price / close price 
                 candle[5],    # Volume
                 candle[6],    # Close time
                 candle[7],    # Quote asset volume
@@ -122,12 +144,15 @@ class Data:
                  }
             df.loc[len(df)]=dic
 
+        
         # cast base columns to float
         for col in self.base_columns:
             df[col]=df[col].astype(float)
 
-        self.df=df
+
         if save:
+            self.df=df
+            self.last_candle=df.iloc[-1].to_dict()
             df.to_csv(os.path.join(self.data_path, f'{self.tickers_map[symbol]}.csv'))
 
         return df
@@ -169,6 +194,14 @@ class Data:
         self.df=data
 
         return data
+
+    def get_time_to_candle_close(self,interval='1m',symbol='BTCUSDT'):
+        # get last candle 
+        last_candle=self.get_binance_candles(symbol, interval=interval, limit=1,save=False).iloc[-1].to_dict()
+        unixtime_now=(datetime.datetime.now() - datetime.timedelta(hours=0)).timestamp() * 1000
+        delta=(last_candle['close_time']-unixtime_now) /1000
+        return delta 
+
 
     @property
     def columns(self):

@@ -44,9 +44,8 @@ class Strategy:
                 best_best_result=best_res
 
 
-        print("     the best params:", best_best_result.x)
-        print("     the best profit:", -best_best_result.fun)
-
+        results={"params": best_best_result.x,'profit':-best_best_result.fun}
+        return results
 
 
 
@@ -119,7 +118,13 @@ class Strategy:
         position = 'NONE'  # Possible values: 'LONG', 'SHORT', 'NONE'
 
         if price_ser is None:
-            price_ser = self.data.df['real_close']
+            if 'real_close' in self.data.df.columns:
+                price_ser = self.data.df['real_close']
+            elif 'close' in self.data.df.columns:
+                price_ser = self.data.df['close']
+            else:
+                raise ValueError("Price data not found. Please provide a price series.")
+            
 
         for i, signal in sig.items():
             # Calculate scalp as a fraction of current capital
@@ -233,7 +238,7 @@ class Strategy:
     
     def strategy(self,col1='ema_10',col2='ema_20',col3='ema_10_der',sign='<',params=[0],save=False):
         #ser = self.data.df[col1] - self.data.df[col2] + params[0] * self.data.df[col3] + params[1] * self.data.df[col3]**2 + params[2] * self.data.df[col3]**3
-        ser = self.data.df[col1] - self.data.df[col2]
+        ser = (1- self.data.df[col1] / self.data.df[col2])*100
         for i, param in enumerate(params):
             ser += param * self.data.df[col3]**(i+1)
         if sign =='>':
@@ -242,6 +247,7 @@ class Strategy:
             sig=ser.apply(lambda x: 1 if x<0 else 0)
         if save:
             self.data.df['sig_bl']=sig
+            self.data.df['sig_raw']=ser
         return sig
     
     def calculate_profit_all_in(self, signal_column='ema_signal', price_column='close'):
