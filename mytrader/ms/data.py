@@ -24,8 +24,16 @@ class Data:
         self.fname = fname
         self.last_candle=None
         self.__read_data()
+        self.data_interval=self.calculate_data_interval()
 
-
+    def calculate_data_interval(self):
+        # get the difference between the first and second candle
+        delta = self.df['datetime'].diff().iloc[1].seconds
+        map={'60':'1m','300':'5m','900':'15m','1800':'30m','3600':'1h','14400':'4h','86400':'1d'}
+        try:
+            return map[str(delta)]
+        except:
+            raise ValueError(f'interval {delta} not found')    
 
     def delsert_df(self, row: pd.Series):
         # Ensure row has all columns, fill missing with NaN
@@ -133,6 +141,7 @@ class Data:
                             , endTime=None  # unixtimestamp 
                             ,save=True
                             ):
+        print('downloading the data ! ')
         url = "https://api.binance.com/api/v3/klines"
         params = {"symbol": symbol, "interval": interval, "limit": limit}
         if startTime:
@@ -194,6 +203,7 @@ class Data:
 
 
         if save:
+            print('saving the data ! ')
             self.df=df
             self.last_candle=df.iloc[-1].to_dict()
             df.to_csv(os.path.join(self.data_path, f'{self.tickers_map[symbol]}.csv'))

@@ -8,6 +8,7 @@ import pandas as pd
 class Strategy:
     def __init__(self,data:Data):
         self.data=data
+        self.fees=3/100
         
 
 
@@ -69,6 +70,7 @@ class Strategy:
         self.__save_prep(save) # if save passed prepare self.data.df for saving data 
         initial_capital,shares = 100.0,0
         capital=initial_capital
+        fees=self.fees
 
         if price_ser is None:
             price_ser=self.data.df['close']
@@ -78,13 +80,13 @@ class Strategy:
             price =price_ser[i]
             # Buy
             if signal == 1 and shares == 0:
-                shares = capital / price
+                shares = (capital-fees) / price
                 capital = 0
                 self.__save(i,save,price=price,position=f'LONG',shares=shares,capital=capital)
 
             # Sell
             if signal == 0 and shares > 0:
-                capital = shares * price
+                capital = shares * price-fees
                 shares = 0
                 self.__save(i,save,price=price,position=f'SHORT',shares=shares,capital=capital)
                     
@@ -111,6 +113,7 @@ class Strategy:
         - total_profit: float, total profit/loss from the strategy
         """
         self.__save_prep(save)  # Prepare data if save is True
+        fees=self.fees
         initial_capital = 100.0
         capital = initial_capital
         total_profit=0
@@ -148,7 +151,7 @@ class Strategy:
             # Enter LONG Position
             if signal == 1 and position != 'LONG':
                 position = 'LONG'
-                shares = scalp / price if price != 0 else 0  # Avoid division by zero
+                shares = (scalp-fees) / price if price != 0 else 0  # Avoid division by zero
                 invested_amount = shares * price
                 capital -= invested_amount  # Deduct the invested capital
                 self.__save(i, save, price=price, position='LONG', shares=shares, capital=capital, position_size=invested_amount)
@@ -157,7 +160,7 @@ class Strategy:
             # Exit LONG Position and Enter SHORT Position
             elif signal == 0 and position == 'LONG' and shares > 0:
                 proceeds = shares * price
-                capital += proceeds  # Add the proceeds from selling shares
+                capital += proceeds-fees  # Add the proceeds from selling shares
                 self.__save(i, save, price=price, position='SHORT', shares=0, capital=capital, position_size=proceeds)
                 shares = 0
                 position = 'SHORT'

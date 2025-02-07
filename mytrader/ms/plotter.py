@@ -13,6 +13,7 @@ class Plotter:
         self.logger.info('plotter object created')
         self.this_path = os.path.dirname(os.path.abspath(__file__)) 
         self.plots_path = os.path.join(self.this_path, 'plots')
+
         
     def simplest_scatter_plot(self,data : Data
                               ,xcol='datetime'
@@ -70,7 +71,7 @@ class Plotter:
 
 
 
-    def candleplot(self, df=None, ser=None, date_column='datetime', signal_column_name='position',total_profit_column='total_profit',sig_bl_column='sig_bl'):
+    def candleplot(self,interval,asset,df=None, ser=None, date_column='datetime', signal_column_name='position',total_profit_column='total_profit',sig_bl_column='sig_bl'):
         if df is None:
             df = self.df.copy()
         if df.empty:
@@ -182,13 +183,15 @@ class Plotter:
         )
     
         # Plot with addplots
+        mindate = df[date_column].min()
+        maxdate = df[date_column].max()
         mpf.plot(
             df,
             type='candle',
             style=style,
             volume=True,
             addplot=addplots,
-            title='Stock Candlestick Chart with Buy/Sell Signals',
+            title=f'{asset} {interval} \n{mindate} \n{maxdate} \n {str(len(df))} ',
             ylabel='Price',
             ylabel_lower='Volume',
             figsize=(12, 8),
