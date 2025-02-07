@@ -1,51 +1,87 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import torch
-from chronos import ChronosPipeline
+import dotenv
+
+import os 
+dotenv.load_dotenv()
+
+# run as script to download 
+#import ms 
+#d=ms.data.Data()
+#d.get_many_binance_candles('BTCUSDT',interval='1h',startTime='2020-01-01',endTime='2025-01-31')
+#exit(1)
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from autogluon.timeseries import TimeSeriesPredictor
+
+# Read the data
+df = pd.read_csv('../data/BTC_2024-01-01_2025-01-31.csv')
+
+
+NZ=100
+df['rolling_z_score']=(df['close'] - df['close'].rolling(NZ).mean() ) / df['close'].rolling(NZ).std()
+
+#plt.scatter(df['datetime'],df['rolling_z_score'])
+#plt.show()
+#exit(1)
 
 
 
+# Select and rename the required columns
+df = df[['datetime', 'rolling_z_score']].rename(columns={'datetime': 'timestamp', 'rolling_z_score': 'value'})
 
-pipeline = ChronosPipeline.from_pretrained(
-  "amazon/chronos-t5-mini",
-  device_map="cpu",
-  torch_dtype=torch.bfloat16,
-  token=TOKEN,
+# Convert 'timestamp' column to datetime
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+N = 10
+train_data = df[:-N]
+val_data = df[-N:]
+
+# Add an identifier column
+train_data['item_id'] = 'BTCUSDT'
+val_data['item_id'] = 'BTCUSDT'
+
+# Set the index
+train_data = train_data.set_index(['item_id', 'timestamp'])
+val_data = val_data.set_index(['item_id', 'timestamp'])
+
+# Initialize the predictor
+predictor = TimeSeriesPredictor(
+    target='value',
+    prediction_length=N,  # Forecast horizon
+    freq='H'  # Assuming hourly data
+)
+predictor.fit(
+    train_data,
+    hyperparameters={
+        'Chronos': {
+            "model_path": "amazon/chronos-bolt-base",
+            "fine_tune":True,
+            "fine_tune_steps":1000,
+            'token': os.getenv('HF_TOKEN'),
+        }
+    }
 )
 
+predictions = predictor.predict(val_data)
+print(predictions)
+print(val_data)
 
-df = pd.read_csv("https://raw.githubusercontent.com/AileenNielsen/TimeSeriesAnalysisWithPython/master/data/AirPassengers.csv")
-df=pd.read_csv('../data/BTC.csv')
-start_index=100
-end_index=300
-df=df.iloc[start_index:end_index].copy()
-df.reset_index(drop=True,inplace=True)
+# make predictions df with mean and timestamp
+pred=predictions['mean'].to_list()
+vals=val_data['value'].to_list()
 
-# calculate z values 
-df['z']=(df['close']-df['close'].mean())/df['close'].std()
+print(pred)
+print(vals)
+list1=pred
+list2=vals
 
-
-original_df=df.copy()
-metric="#Passengers"
-metric='z'
-prediction_length = 20
-df=df.iloc[:-prediction_length].copy()
-# context must be either a 1D tensor, a list of 1D tensors,
-# or a left-padded 2D tensor with batch as the first dimension
-context = torch.tensor(df[metric])
-
-forecast = pipeline.predict(context, prediction_length)  # shape [num_series, num_samples, prediction_length]
-
-# visualize the forecast
-forecast_index = range(len(df), len(df) + prediction_length)
-low, median, high = np.quantile(forecast[0].numpy(), [0.05, 0.5, 0.95], axis=0)
-
-plt.figure(figsize=(8, 4))
-plt.plot(df[metric], color="royalblue", label="train data")
-plt.plot(original_df[metric], color="green", label="historical data",alpha=0.5)
-plt.plot(forecast_index, median, color="tomato", label="median forecast")
-plt.fill_between(forecast_index, low, high, color="tomato", alpha=0.3, label="90% prediction interval")
+fig,ax=plt.subplots()
+plt.scatter(range(len(list1)), list1, color='r', marker='o', label='List 1')
+plt.scatter(range(len(list2)), list2, color='b', marker='o', label='List 2')
 plt.legend()
-plt.grid()
 plt.show()

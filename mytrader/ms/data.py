@@ -41,7 +41,7 @@ class Data:
         self.df=self.df.iloc[1:]
         return self.df
 
-    def __read_data(self,):
+    def __read_data(self):
         self.logger.info(f'Reading data from {self.fname}')
         file_path = os.path.join(self.data_path, self.fname)
         # check if file exists 
@@ -89,7 +89,50 @@ class Data:
         df=self.get_binance_candles("BTCUSDT", interval=interval, limit=1,save=False)
         return df.iloc[-1]
 
-    def get_binance_candles(self,symbol, interval="1m", limit=1000, startTime=None, endTime=None,save=True):
+    def to_milliseconds(self,date_str):
+        """Convert a date string (YYYY-MM-DD) to Binance timestamp (milliseconds)."""
+        dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")  # Use datetime.datetime
+        return int(dt.timestamp() * 1000)
+    
+    def to_datetime(self,unixtimestamp):
+        return pd.to_datetime(unixtimestamp,unit='ms')
+    
+
+    def get_many_binance_candles(self,symbol,interval,startTime,endTime,save=True):
+        startime=self.to_milliseconds(startTime)
+        endtime=self.to_milliseconds(endTime)
+        filenames=[]
+        while True:
+            df=self.get_binance_candles(symbol, interval=interval, limit=500,startTime=startime,endTime=None,save=False)
+            start=str(self.to_datetime(df['unixtimestamp'].iloc[0])).replace(':','_').replace(' ','_')
+            end=str(self.to_datetime(df['unixtimestamp'].iloc[-1])).replace(':','_').replace(' ','_')
+            filename = os.path.join(self.data_path, f'{self.tickers_map[symbol]}_{start}_{end}.csv')
+            df.to_csv(filename)
+            startime=df['unixtimestamp'].iloc[-1]+1
+            filenames.append(filename)
+            if startime > endtime:
+                break
+            
+        master_df=pd.concat([pd.read_csv(filename) for filename in filenames])
+        master_df.to_csv(os.path.join(self.data_path, f'{self.tickers_map[symbol]}_{startTime}_{endTime}.csv'))
+        
+        # go through files to check if there are any missing candles
+        for filename in filenames:
+            df=pd.read_csv(filename)
+            if len(df) != 500 and filename !=filenames[-1]: # last filename wont have 500 candles
+                print(f'file {filename} has {len(df)} candles')
+                print(df)
+                raise ValueError('missing candles')
+        
+        
+        return master_df
+
+    def get_binance_candles(self,symbol, interval="1m"
+                            , limit=1000     # fetches this number of candles
+                            , startTime=None # unixtimestamp 
+                            , endTime=None  # unixtimestamp 
+                            ,save=True
+                            ):
         url = "https://api.binance.com/api/v3/klines"
         params = {"symbol": symbol, "interval": interval, "limit": limit}
         if startTime:

@@ -1,7 +1,10 @@
 # Byte-compiled / optimized / DLL files
-ms/data/*
 
-!ms/data/dummy.txt
+mytrader/ms/data/*
+mytrader/ms/scripts/AutogluonModels/*
+
+
+
 
 __pycache__/
 *.py[cod]

@@ -22,7 +22,8 @@ logger.info('trade_5m started')
 
 d=ms.data.Data()
 
-df = d.get_binance_candles("BTCUSDT", interval="5m", limit=300)
+df = d.get_binance_candles("BTCUSDT", interval="1h", limit=100000)
+exit(1)
 d.recalculate_all()
 s=ms.strategy.Strategy(d)
 tb=ms.trade_binance.Trade()
