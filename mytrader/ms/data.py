@@ -85,8 +85,8 @@ class Data:
         dic={'1m':0,'5m':5,'15m':15,'30m':30,'1h':60,'4h':240,'1d':1440}
         return dic[interval]
 
-    def get_last_candle(self):
-        df=self.get_binance_candles("BTCUSDT", interval="1m", limit=1,save=False)
+    def get_last_candle(self,interval='1m'):
+        df=self.get_binance_candles("BTCUSDT", interval=interval, limit=1,save=False)
         return df.iloc[-1]
 
     def get_binance_candles(self,symbol, interval="1m", limit=1000, startTime=None, endTime=None,save=True):

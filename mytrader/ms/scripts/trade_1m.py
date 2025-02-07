@@ -9,20 +9,20 @@ import dotenv
 import os
 dotenv.load_dotenv()
 
-logger=logging.getLogger('trade_1m')
+logger=logging.getLogger('trade_5m')
 logger.setLevel(logging.INFO)
 # add file handler 
-fh = logging.FileHandler('trade_1m.log')
+fh = logging.FileHandler('trade_5m.log')
 fh.setLevel(logging.INFO)
 logger.addHandler(fh)
 
 
-logger.info('trade_1m started')
+logger.info('trade_5m started')
 
 
 d=ms.data.Data()
 
-df = d.get_binance_candles("BTCUSDT", interval="1m", limit=300)
+df = d.get_binance_candles("BTCUSDT", interval="5m", limit=300)
 d.recalculate_all()
 s=ms.strategy.Strategy(d)
 tb=ms.trade_binance.Trade()
@@ -45,7 +45,7 @@ def sleep_with_countdown(total_seconds):
     print("\rDone sleeping!")
 
 def optimize():
-    d.get_binance_candles('BTCUSDT',interval='1m',limit=600)
+    d.get_binance_candles('BTCUSDT',interval='5m',limit=600)
     d.recalculate_all()
     s=ms.strategy.Strategy(d)
     dic=s.optimize()
@@ -63,7 +63,7 @@ while True:
         count=0
         is_starting=False
     
-    delta=d.get_time_to_candle_close()
+    delta=d.get_time_to_candle_close(interval='5m')
     if delta > 5 :
         logger.info(f'sleeping {delta-5.1}')
         print(f'sleeping {delta-5.1}')
@@ -72,7 +72,7 @@ while True:
     else:
         count+=1
         logger.info('time to trade ! ')
-        last_candle=d.get_last_candle()
+        last_candle=d.get_last_candle(interval='5m')
         logger.info(f'last candle {last_candle}')
 
         d.delsert_df(last_candle)
@@ -136,15 +136,15 @@ while True:
 #    retries = retries.increment(
 #  File "C:\gh\this_venv\lib\site-packages\urllib3\util\retry.py", line 519, in increment
 #    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
-#urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.binance.com', port=443): Max retries exceeded with url: /api/v3/klines?symbol=BTCUSDT&interval=1m&limit=1 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x00000220B2DAE370>: Failed to establish a new connection: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond'))
+#urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.binance.com', port=443): Max retries exceeded with url: /api/v3/klines?symbol=BTCUSDT&interval=5m&limit=1 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x00000220B2DAE370>: Failed to establish a new connection: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond'))
 #
 #During handling of the above exception, another exception occurred:
 #
 #Traceback (most recent call last):
-#  File "C:\gh\mytrader\mytrader\ms\scripts\trade_1m.py", line 38, in <module>
+#  File "C:\gh\mytrader\mytrader\ms\scripts\trade_5m.py", line 38, in <module>
 #    last_candle=d.get_last_candle()
 #  File "C:\gh\mytrader\mytrader\ms\data.py", line 89, in get_last_candle
-#    df=self.get_binance_candles("BTCUSDT", interval="1m", limit=1,save=False)
+#    df=self.get_binance_candles("BTCUSDT", interval="5m", limit=1,save=False)
 #  File "C:\gh\mytrader\mytrader\ms\data.py", line 99, in get_binance_candles
 #    response = requests.get(url, params=params)
 #  File "C:\gh\this_venv\lib\site-packages\requests\api.py", line 73, in get
@@ -157,5 +157,5 @@ while True:
 #    r = adapter.send(request, **kwargs)
 #  File "C:\gh\this_venv\lib\site-packages\requests\adapters.py", line 700, in send
 #    raise ConnectionError(e, request=request)
-#requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.binance.com', port=443): Max retries exceeded with url: /api/v3/klines?symbol=BTCUSDT&interval=1m&limit=1 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 
+#requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.binance.com', port=443): Max retries exceeded with url: /api/v3/klines?symbol=BTCUSDT&interval=5m&limit=1 (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 
 #0x00000220B2DAE370>: Failed to establish a new connection: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond'))
