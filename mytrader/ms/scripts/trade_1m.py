@@ -21,7 +21,7 @@ logger.info('trade_5m started')
 print('running')
 
 d=ms.data.Data()
-INTERVAL='1m'
+INTERVAL='30m'
 N=1000
 dic={'comment':'','datetime':'','signal':'','last_order':'', 'candle':'','action':'','amos':'','order':''}
 trade_df=pd.DataFrame(columns=dic.keys())
@@ -97,6 +97,7 @@ while True:
                 dic['amos']=str(amos)
                 logger.info(f'order {o}')
                 logger.info(f'amos {amos}')
+                dic['order']='bought'
             else:
                 dic['comment']='no position to buy'
                 logger.info('----> no position to buy')
@@ -108,6 +109,7 @@ while True:
                 o,amos=tb.sell('bitek',-1)
                 dic['order']=str(o)
                 dic['amos']=str(amos)
+                dic['order']='sold'
                 logger.info(f'order {o}')
                 logger.info(f'amos {amos}')
             else:
