@@ -2,7 +2,7 @@
 
 mytrader/ms/data/*
 mytrader/ms/scripts/AutogluonModels/*
-
+*.csv
 
 
 
