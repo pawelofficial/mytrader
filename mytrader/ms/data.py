@@ -141,6 +141,7 @@ class Data:
                             , endTime=None  # unixtimestamp 
                             ,save=True
                             ):
+        
         print('downloading the data ! ')
         url = "https://api.binance.com/api/v3/klines"
         params = {"symbol": symbol, "interval": interval, "limit": limit}

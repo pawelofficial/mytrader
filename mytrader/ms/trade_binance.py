@@ -13,13 +13,23 @@ class Trade:
         self.API_KEY=os.environ.get('API_KEY')
         self.API_SECRET=os.environ.get('API_SECRET')
         self.client = Client(self.API_KEY, self.API_SECRET)
-        self.symbols=['USDT','BTC']
-        self.pairs={'bitek':'BTCUSDT'}
+        
+        self.symbols=['USDC','BTC']
+        self.pairs={'bitek':'BTCUSDC'}
+        self.trade_symbols={'stable':'USDC','crypto':'BTC'}
         self.logger=setup_logger('trade')
         self.last_order={'side':None,'quantity':None,'status':None,'order':None}
+        self.format_quantity = lambda n: '{:.8f}'.format(n)  # Format to 8 decimal places
         
 
 # Function to get account balance for a specific asset
+    def check_portfolio(self):
+        portfolio={}
+        for symbol in self.symbols:
+            balance = self.client.get_asset_balance(asset=symbol)
+            portfolio[symbol] = float(balance['free'])
+        return portfolio            
+
     def get_balance(self,asset):
         assert asset in self.symbols
         balance = self.client.get_asset_balance(asset=asset)
@@ -47,7 +57,6 @@ class Trade:
         dic={'capital':capital,'dollars_to_spend':dollars_to_spend,'asset_price':asset_price,'asset_amo':asset_amo,'dollars_spent':dollars_spent,'leftovers':leftovers,'inputs':{'dollars_to_spend':dollars_to_spend,'capital_ratio':capital_ratio,'all_in_when_negative':all_in_when_negative}}
         if leftovers<0 and all_in_when_negative[0]:
             if all_in_when_negative[1]=='capital_ratio':     
-                   
                 print('trying again on capital_ratio ',dic)
                 new_ratio=all_in_when_negative[2]
                 all_in_when_negative = (True,'capital_ratio',new_ratio*0.99)
@@ -60,7 +69,7 @@ class Trade:
         elif leftovers<0 and all_in_when_negative[0]==False:
             assert leftovers>0, f'not enough capital {leftovers} > 0'            
         
-
+        print(dic)
         return dic
 
     def get_lot_size(self,pair):
@@ -73,13 +82,17 @@ class Trade:
 
     # Function to place a market buy order
     def buy(self, pair, dollar_quantity):
-        dic=self.calculate_amo_to_buy('USDT','bitek',dollars_to_spend=dollar_quantity,capital_ratio=1,all_in_when_negative = (True,'dollars_to_spend',1))
+        if dollar_quantity<0:
+            print('not supporting all in yet')
+            return 
+        dic=self.calculate_amo_to_buy(self.trade_symbols['stable'],'bitek',dollars_to_spend=dollar_quantity,capital_ratio=1,all_in_when_negative = (True,'dollars_to_spend',1))
         quantity=dic['asset_amo']
+        
         return self.place_market_buy_order(pair, quantity)
     
     def sell(self, pair, quantity):
         if quantity==-1:
-            quantity=self.get_balance('BTC')
+            quantity=self.get_balance(self.trade_symbols['crypto'])
         return self.place_market_sell_order(pair, quantity)
     
     def place_market_sell_order(self, pair, quantity):
@@ -93,7 +106,7 @@ class Trade:
             # Place the market sell order using the adjusted quantity
             order = self.client.order_market_sell(
                 symbol=self.pairs[pair],
-                quantity=order_quantity
+                quantity=self.format_quantity(order_quantity)
             )
             self.logger.info(f"Sell Order placed:\n {order}")
             self.last_order={'side':'SELL','quantity':order_quantity,'status':'OK','order':order}
@@ -104,23 +117,25 @@ class Trade:
 
         # check amounts afterwards 
         time.sleep(3)
-        usdt_amo=self.get_balance('USDT')
-        btc_amo=self.get_balance('BTC')
+        usdt_amo=self.get_balance(self.trade_symbols['stable'])
+        btc_amo=self.get_balance(self.trade_symbols['crypto'])
         
-        return order,{'usdt':usdt_amo,'btc':btc_amo}
+        return order,{'stable':usdt_amo,'crypto':btc_amo}
     
     def place_market_buy_order(self, pair, quantity):
         # Get the step size and minimum quantity for the trading pair
         step_size, minQty = self.get_lot_size(self.pairs[pair])
 
+        print(self.format_quantity(quantity))
         # Ensure the quantity is adjusted to comply with LOT_SIZE
         order_quantity = max((quantity // step_size) * step_size, minQty)
+        print(self.format_quantity(order_quantity),minQty)
         order = None
         try:
             # Place the market buy order using the adjusted quantity
             order = self.client.order_market_buy(
                 symbol=self.pairs[pair],
-                quantity=order_quantity
+                quantity=self.format_quantity(order_quantity)
             )
  
             self.logger.info(f"Order placed:\n {order}")
@@ -132,10 +147,10 @@ class Trade:
 
         # Wait for a moment and check balances
         time.sleep(3)
-        usdt_amo = self.get_balance('USDT')
-        btc_amo = self.get_balance('BTC')
+        usdt_amo = self.get_balance(self.trade_symbols['stable'])
+        btc_amo = self.get_balance(self.trade_symbols['crypto'])
 
-        return order, {'usdt': usdt_amo, 'btc': btc_amo}
+        return order, {'stable': usdt_amo, 'crypto': btc_amo}
 
 
 #Order placed: {'symbol': 'BTCUSDT', 'orderId': 35502221867, 'orderListId': -1, 'clientOrderId': 'x-HNA2TXFJd5dcf0555eb73ee463459e', 'transactTime': 1737304377833, 'price': '0.00000000', 'origQty': '0.00019000', 'executedQty': '0.00019000', 'origQuoteOrderQty': '0.00000000', 'cummulativeQuoteQty': '19.96178380', 'status': 'FILLED', 'timeInForce': 'GTC', 'type': 'MARKET', 'side': 'BUY', 'workingTime': 1737304377833, 'fills': [{'price': '105062.02000000', 'qty': '0.00019000', 'commission': '0.00000019', 'commissionAsset': 'BTC', 'tradeId': 4426925936}], 'selfTradePreventionMode': 'EXPIRE_MAKER'}
